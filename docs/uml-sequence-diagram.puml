@@ -1,0 +1,39 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Arial
+actor Client
+participant "visitor: TotalSizeVisitor" as V
+participant "root: DirectoryNode" as R
+participant "nested: DirectoryNode" as D
+participant "file: FileNode" as F
+Client -> V : scan(root)
+activate V
+V -> V : totalSize = 0
+V -> R : accept(this)
+activate R
+R -> V : visit(this: DirectoryNode)
+activate V
+V -> D : accept(this)
+activate D
+D -> V : visit(this: DirectoryNode)
+activate V
+V -> F : accept(this) [first dispatch]
+activate F
+F -> V : visit(this: FileNode) [second dispatch]
+activate V
+V -> V : totalSize += file.getSize()
+deactivate V
+F --> V
+deactivate F
+deactivate V
+D --> V
+deactivate D
+deactivate V
+R --> V
+deactivate R
+V --> Client : scan finished
+deactivate V
+Client -> V : getTotalSize()
+V --> Client : totalSize
+@enduml

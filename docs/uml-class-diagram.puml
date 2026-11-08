@@ -1,0 +1,57 @@
+@startuml
+!pragma layout smetana
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Arial
+hide empty members
+interface Element {
+  +accept(visitor: Visitor): void
+}
+abstract class Node {
+  -name: String
+  -parent: DirectoryNode
+  +getName(): String
+  +getParent(): DirectoryNode
+}
+class FileNode {
+  -size: long
+  +getSize(): long
+  +accept(visitor: Visitor): void
+}
+class DirectoryNode {
+  -children: List<Node>
+  +addChild(child: Node): void
+  +getChildren(): List<Node>
+  +accept(visitor: Visitor): void
+}
+interface Visitor {
+  +visit(file: FileNode): void
+  +visit(directory: DirectoryNode): void
+}
+class TotalSizeVisitor {
+  +scan(root: Element): void
+  +getTotalSize(): long
+}
+class SearchVisitor {
+  +SearchVisitor(criterion: Predicate<String>, minimumSize: long)
+  +scan(root: Element): void
+  +getMatches(): List<String>
+}
+class StatisticsVisitor {
+  +scan(root: Element): void
+  +getFileCount(): int
+  +getDirectoryCount(): int
+  +getMaximumDepth(): int
+}
+Element <|.. Node
+Node <|-- FileNode
+Node <|-- DirectoryNode
+DirectoryNode "0..1 parent" *-- "0..* children" Node
+Visitor <|.. TotalSizeVisitor
+Visitor <|.. SearchVisitor
+Visitor <|.. StatisticsVisitor
+Element -right-> Visitor : accept
+FileNode ..> Visitor : visit(this)
+DirectoryNode ..> Visitor : visit(this)
+@enduml
