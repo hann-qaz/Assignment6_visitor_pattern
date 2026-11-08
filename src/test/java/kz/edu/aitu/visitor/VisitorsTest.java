@@ -62,4 +62,86 @@ class VisitorsTest {
         visitor.scan(new FileNode("small.bin", 7));
         assertEquals(7, visitor.getTotalSize());
     }
+
+    @Test
+    void statisticsIncludeRootAndDeepEmptyDirectories() {
+        DirectoryNode root = new DirectoryNode("root");
+        DirectoryNode folder = new DirectoryNode("folder");
+        DirectoryNode deep = new DirectoryNode("deep");
+        DirectoryNode empty = new DirectoryNode("empty");
+        root.addChild(folder);
+        root.addChild(new FileNode("a.txt", 2));
+        folder.addChild(deep);
+        deep.addChild(empty);
+        folder.addChild(new FileNode("b.txt", 4));
+        StatisticsVisitor visitor = new StatisticsVisitor();
+        visitor.scan(root);
+        assertEquals(2, visitor.getFileCount());
+        assertEquals(4, visitor.getDirectoryCount());
+        assertEquals(3, visitor.getMaximumDepth());
+    }
+
+    @Test
+    void statisticsForEmptyRootAndFileRootStartAtDepthZero() {
+        StatisticsVisitor visitor = new StatisticsVisitor();
+        visitor.scan(new DirectoryNode("empty"));
+        assertEquals(0, visitor.getFileCount());
+        assertEquals(1, visitor.getDirectoryCount());
+        assertEquals(0, visitor.getMaximumDepth());
+        visitor.scan(new FileNode("single.txt", 5));
+        assertEquals(1, visitor.getFileCount());
+        assertEquals(0, visitor.getDirectoryCount());
+        assertEquals(0, visitor.getMaximumDepth());
+    }
+
+    @Test
+    void statisticsResetAndUseTheSelectedRootDepth() {
+        DirectoryNode root = new DirectoryNode("outside");
+        DirectoryNode folder = new DirectoryNode("folder");
+        root.addChild(folder);
+        folder.addChild(new FileNode("inside.txt", 6));
+        StatisticsVisitor visitor = new StatisticsVisitor();
+        visitor.scan(root);
+        assertEquals(2, visitor.getMaximumDepth());
+        visitor.scan(folder);
+        visitor.scan(folder);
+        assertEquals(1, visitor.getFileCount());
+        assertEquals(1, visitor.getDirectoryCount());
+        assertEquals(1, visitor.getMaximumDepth());
+        folder.addChild(new FileNode("new.txt", 7));
+        visitor.scan(folder);
+        assertEquals(2, visitor.getFileCount());
+    }
+
+    @Test
+    void operationOrderDoesNotAffectResults() {
+        DirectoryNode root = Main.createDemoTree();
+        TotalSizeVisitor size = new TotalSizeVisitor();
+        SearchVisitor search = new SearchVisitor(name -> name.endsWith(".txt"), 120);
+        StatisticsVisitor statistics = new StatisticsVisitor();
+        statistics.scan(root);
+        search.scan(root);
+        size.scan(root);
+        assertEquals(3368, size.getTotalSize());
+        assertEquals(java.util.List.of("documents/notes.txt", "notes.txt"), search.getMatches());
+        assertEquals(5, statistics.getFileCount());
+        assertEquals(5, statistics.getDirectoryCount());
+        assertEquals(3, statistics.getMaximumDepth());
+        size.scan(root);
+        statistics.scan(root);
+        search.scan(root);
+        assertEquals(3368, size.getTotalSize());
+        assertEquals(5, statistics.getFileCount());
+        assertEquals(5, statistics.getDirectoryCount());
+        assertEquals(3, statistics.getMaximumDepth());
+        assertEquals(java.util.List.of("documents/notes.txt", "notes.txt"), search.getMatches());
+    }
+
+    @Test
+    void nullRootsAreRejected() {
+        assertThrows(NullPointerException.class, () -> new TotalSizeVisitor().scan(null));
+        assertThrows(NullPointerException.class, () -> new StatisticsVisitor().scan(null));
+        SearchVisitor search = new SearchVisitor(name -> true, 0);
+        assertThrows(NullPointerException.class, () -> search.scan(null));
+    }
 }
